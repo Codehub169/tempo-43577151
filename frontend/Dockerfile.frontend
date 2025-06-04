@@ -1,0 +1,40 @@
+# This Dockerfile builds the React frontend application into static assets.
+# The resulting image is intended to be used by another service (e.g., backend) 
+# to copy the static assets from.
+
+# ---- Stage 1: Build React Application ----
+FROM node:18-alpine AS builder
+
+LABEL stage="frontend-builder"
+
+WORKDIR /app
+
+# Copy package.json and lock file
+# Ensure you have either package-lock.json (for npm) or yarn.lock (for yarn)
+COPY package.json ./
+# If using npm:
+COPY package-lock.json* ./
+# If using yarn, uncomment these lines and comment out npm lines:
+# COPY yarn.lock ./
+# RUN yarn install --frozen-lockfile
+
+# Install dependencies using npm ci for a clean, reproducible install from lock file
+# --legacy-peer-deps is used to bypass peer dependency conflicts if any exist in the project.
+RUN npm ci --legacy-peer-deps
+
+# Copy the rest of the frontend application source code
+# Ensure a .dockerignore file is present in the frontend directory to exclude 
+# node_modules, dist, .env, etc., from the build context for this COPY command.
+COPY . .
+
+# Build the React application for production.
+# Vite typically outputs to a 'dist' folder in the WORKDIR (/app/dist).
+# Environment variables needed at build time (e.g., VITE_API_BASE_URL) can be passed here.
+# For this project's Docker setup, VITE_API_BASE_URL is set to '/api' because the frontend assets
+# will be served by the backend, and API requests from the frontend should go to the /api path
+# relative to the same origin.
+RUN VITE_API_BASE_URL='/api' npm run build
+
+# The final output of this Dockerfile is the content of /app/dist.
+# This stage doesn't run anything; it just produces an image with build artifacts.
+# The backend Dockerfile will use "COPY --from=[image_name_of_this_build] /app/dist /path/to/serve/from"
