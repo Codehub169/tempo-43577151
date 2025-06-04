@@ -51,7 +51,17 @@ Before you begin, ensure you have the following installed **on your host machine
 3.  **Run the application:**
     Make sure Docker Desktop (or Docker daemon on Linux) is running **on your host machine**.
     
-    **CRITICAL NOTE:** The `startup.sh` script **must** be executed directly on your **host machine's terminal**, not from within a Docker container. The script requires access to the Docker CLI installed on your host to build and manage containers. Running it elsewhere will lead to errors like "Docker command not found".
+> **🚨 CRITICAL NOTE: EXECUTE ON HOST MACHINE ONLY 🚨**
+>
+> The `startup.sh` script **MUST BE RUN ON YOUR HOST MACHINE'S TERMINAL**.
+>
+> **DO NOT RUN THIS SCRIPT INSIDE A DOCKER CONTAINER, VM, OR ANY ENVIRONMENT WHERE DOCKER IS NOT INSTALLED AND ACCESSIBLE LOCALLY.**
+>
+> This script orchestrates Docker containers (builds images, starts/stops containers). It *requires direct access* to the Docker daemon installed on your computer. Running it elsewhere (e.g., inside a container it's trying to manage) will fail, typically with errors like "Docker command not found" or "cannot connect to the Docker daemon".
+>
+> ✅ **Correct Usage:** Open a terminal on your main operating system (Windows, macOS, Linux) and run `bash startup.sh` from the project root.
+>
+> ❌ **Incorrect Usage:** Running `bash startup.sh` from within a Docker container shell, or a remote server without Docker installed.
 
     From the project root directory, execute the script:
     ```bash

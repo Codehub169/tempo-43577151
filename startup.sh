@@ -1,4 +1,18 @@
 #!/bin/bash
+
+################################################################################
+#                                                                              #
+#                  🔴   !!!   IMPORTANT WARNING   !!!   🔴                     #
+#                                                                              #
+#   This script MUST be executed on your HOST MACHINE, not inside a Docker     #
+#   container or any environment without direct Docker daemon access.          #
+#                                                                              #
+#   It orchestrates Docker containers and requires Docker to be installed      #
+#   and running on the system executing this script.                           #
+#                                                                              #
+################################################################################
+echo "" # Newline for visual separation after the warning box
+
 # This script automates the setup and launch of the CRM application.
 
 # Exit immediately if a command exits with a non-zero status.
