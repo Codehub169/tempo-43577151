@@ -94,12 +94,34 @@ echo "Building images and starting services... (This may take a few minutes on t
 # We handle the success/failure of this command explicitly for better UX,
 # so `set -e` won't immediately halt if it fails.
 if $COMPOSE_COMMAND up --build -d --remove-orphans; then
+  # Determine the application port for display
+  APP_PORT_TO_DISPLAY="9000" # Default port
+  ENV_FILE_PATH="${script_dir}/.env" # .env file should be in the same directory as startup.sh
+
+  if [ -f "$ENV_FILE_PATH" ]; then
+    # Read APP_PORT, remove comments, trim whitespace, get value after '='.
+    # Handles APP_PORT=8000, APP_PORT = 8000, APP_PORT="8000", APP_PORT='8000'.
+    # Uses tail -n 1 to get the last definition if APP_PORT is defined multiple times.
+    RAW_PORT_FROM_ENV=$(grep -E '^\s*APP_PORT\s*=' "$ENV_FILE_PATH" | tail -n 1)
+    
+    if [ -n "$RAW_PORT_FROM_ENV" ]; then
+        # Extract value: remove 'APP_PORT=' part and potential quotes/spaces
+        PORT_VALUE=$(echo "$RAW_PORT_FROM_ENV" | sed -e 's/^\s*APP_PORT\s*=\s*//' -e 's/\s*$//' -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//'")
+        # Validate if it's a number (basic check)
+        if [[ "$PORT_VALUE" =~ ^[0-9]+$ ]] && [ "$PORT_VALUE" -gt 0 ] && [ "$PORT_VALUE" -lt 65536 ]; then
+            APP_PORT_TO_DISPLAY="$PORT_VALUE"
+        else
+            echo "Warning: Invalid APP_PORT value '$PORT_VALUE' found in $ENV_FILE_PATH. Using default port 9000 for display guidance." >&2
+        fi    
+    fi
+  fi
+
   echo # Newline
   echo "--------------------------------------------------------------------"
   echo "CRM Application services are starting up!"
   echo
-  echo "Frontend & API available at: http://localhost:9000"
-  echo "(API endpoints will be under http://localhost:9000/api/...)"
+  echo "Frontend & API available at: http://localhost:${APP_PORT_TO_DISPLAY}"
+  echo "(API endpoints will be under http://localhost:${APP_PORT_TO_DISPLAY}/api/...)"
   echo
   echo "Database (PostgreSQL) is running in a container."
   echo "  - Access credentials and port can be found in your .env file or docker-compose.yml."

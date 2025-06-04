@@ -51,7 +51,7 @@ Before you begin, ensure you have the following installed **on your host machine
 3.  **Run the application:**
     Make sure Docker Desktop (or Docker daemon on Linux) is running **on your host machine**.
     
-> **🚨 CRITICAL NOTE: EXECUTE ON HOST MACHINE ONLY 🚨**
+> **ud83dudea8 CRITICAL NOTE: EXECUTE ON HOST MACHINE ONLY ud83dudea8**
 >
 > The `startup.sh` script **MUST BE RUN ON YOUR HOST MACHINE'S TERMINAL**.
 >
@@ -59,9 +59,19 @@ Before you begin, ensure you have the following installed **on your host machine
 >
 > This script orchestrates Docker containers (builds images, starts/stops containers). It *requires direct access* to the Docker daemon installed on your computer. Running it elsewhere (e.g., inside a container it's trying to manage) will fail, typically with errors like "Docker command not found" or "cannot connect to the Docker daemon".
 >
-> ✅ **Correct Usage:** Open a terminal on your main operating system (Windows, macOS, Linux) and run `bash startup.sh` from the project root.
+> 
+> 	
+> 
+> 
+> 
+> **Correct Usage:** Open a terminal on your main operating system (Windows, macOS, Linux) and run `bash startup.sh` from the project root.
 >
-> ❌ **Incorrect Usage:** Running `bash startup.sh` from within a Docker container shell, or a remote server without Docker installed.
+> 
+> 	
+> 
+> 
+> 
+> **Incorrect Usage:** Running `bash startup.sh` from within a Docker container shell, or a remote server without Docker installed.
 
     From the project root directory, execute the script:
     ```bash
@@ -78,7 +88,7 @@ Before you begin, ensure you have the following installed **on your host machine
     Once the script completes successfully, the application services will be running. The connection error `HTTPConnectionPool... No connection could be made because the target machine actively refused it` usually indicates that the application services did not start correctly. This is often due to issues encountered while running `startup.sh` (such as Docker not being found or other script errors). See the [Troubleshooting](#troubleshooting) section for more guidance.
 
     After successful startup, the application will typically be accessible at:
-    - **Frontend & API:** [http://localhost:9000](http://localhost:9000) (Adjust URL/port if your application's configuration in the root `.env` file's `APP_PORT` is different)
+    - **Frontend & API:** [http://localhost:9000](http://localhost:9000) (Adjust URL/port if your application's configuration in the root `.env` file's `APP_PORT` is different. The `startup.sh` script will display the correct URL to use.)
     - API endpoints are usually prefixed, for example: `http://localhost:9000/api/users` (The prefix is `/api` by default, as set in the backend).
 
 ## Troubleshooting
@@ -106,7 +116,7 @@ This means that Docker or Docker Compose is either not installed on your host ma
 **Symptom:**
 When trying to access the application in your browser (e.g., `http://localhost:9000`), you encounter errors like:
 - `requests.exceptions.ConnectionError: HTTPConnectionPool(...) Max retries exceeded with url: /api/... (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at ...>: Failed to establish a new connection: [Errno 111] Connection refused'))`
-- "This site can	 be reached" or "localhost refused to connect."
+- "This site can't be reached" or "localhost refused to connect."
 
 **Cause:**
 These errors typically indicate that the backend application services (which run inside Docker containers) are not running, not accessible, or did not start up correctly. This is often a consequence of issues during the `startup.sh` script execution.
@@ -115,16 +125,23 @@ These errors typically indicate that the backend application services (which run
 1.  **Verify `startup.sh` Execution:**
     *   Confirm that you ran the `startup.sh` script **on your host machine**.
     *   Check the output of the `startup.sh` script for any errors reported during the Docker build or startup process. Address any errors reported there first.
-2.  **Check Docker Container Status:**
+2.  **Verify `APP_PORT` and Use Correct URL:**
+    *   If you have customized the `APP_PORT` in your root `.env` file (the `.env` file in the project's main directory), ensure this value is correct and is a valid port number.
+    *   The `startup.sh` script, upon successful startup, will output the exact URL (including the port) where the application is accessible (e.g., `http://localhost:YOUR_PORT`). **Always use this specific URL displayed by the script.**
+    *   **External Access:** If you are trying to access the application from a different machine using an external IP address (not `localhost`):
+        *   Ensure the `APP_PORT` in your root `.env` file is correctly set to the port you intend to expose externally.
+        *   Your host machine's firewall (and any network firewalls, e.g., on your router or cloud provider) must allow incoming connections on this port.
+        *   You must use your host machine's external IP address in the URL (e.g., `http://YOUR_HOST_EXTERNAL_IP:YOUR_PORT`), not `localhost`.
+3.  **Check Docker Container Status:**
     *   Open a terminal on your host machine and run `docker ps` (or `docker compose ps` if you used `docker compose`) to see if the application containers (e.g., `crm_backend`, `crm_db`) are running.
     *   If containers are not running or are continuously restarting, check their logs.
-3.  **Check Docker Logs:**
+4.  **Check Docker Logs:**
     *   The `startup.sh` script will provide the command to view logs if it fails (e.g., `docker-compose logs` or `docker compose logs`).
     *   To view logs for all services at any time: `docker-compose logs -f` (or `docker compose logs -f`).
     *   To view logs for a specific service (e.g., backend): `docker-compose logs -f backend` (or `docker compose logs -f backend`).
     *   Look for error messages in the logs that might indicate why a service failed to start (e.g., database connection issues, port conflicts, application errors).
-4.  **Ensure Host Machine Resources:** Ensure your host machine has sufficient resources (CPU, RAM) for Docker to run the containers.
-5.  **Firewall/VPN:** In some cases, local firewall software or VPNs might interfere with `localhost` connections or Docker's networking. Try temporarily disabling them to see if it resolves the issue.
+5.  **Ensure Host Machine Resources:** Ensure your host machine has sufficient resources (CPU, RAM) for Docker to run the containers.
+6.  **Firewall/VPN (Localhost):** In some cases, local firewall software or VPNs might interfere with `localhost` connections or Docker's networking. Try temporarily disabling them to see if it resolves the issue when accessing via `localhost`.
 
 ### 3. General Advice: Running `startup.sh`
 
