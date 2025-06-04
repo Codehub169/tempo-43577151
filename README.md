@@ -84,11 +84,12 @@ You see an error message similar to:
 
 **Cause:**
 This means that Docker or Docker Compose is either not installed on your host machine, or their command-line tools are not accessible in your system's PATH.
+- You might be attempting to run the `startup.sh` script from within a Docker container. The script is designed to manage Docker from your host system, not to be run inside another container (unless it's a specifically configured Docker-in-Docker setup, which this project does not use by default).
 
 **Solution:**
 1.  **Verify Installation:** Ensure Docker and Docker Compose are correctly installed on your **host machine**. Refer to the [Prerequisites](#prerequisites) section for installation links.
 2.  **Check PATH:** Make sure the directories containing `docker` and `docker-compose` (or `docker compose`) executables are included in your system's PATH environment variable.
-3.  **Run `startup.sh` on Host:** Crucially, the `startup.sh` script **must be executed directly on your host machine's terminal**, not inside a Docker container or a virtual machine that doesn't have Docker configured. The script itself performs these checks and provides detailed error messages if Docker or Docker Compose are not found or not executable.
+3.  **Run `startup.sh` on Host:** Crucially, the `startup.sh` script **must be executed directly on your host machine's terminal**, not inside a Docker container or a virtual machine that doesn't have Docker configured. The script itself performs these checks and provides detailed error messages if Docker or Docker Compose are not found or not executable. The `startup.sh` script now includes a check to detect if it's being run inside a standard Docker container. If this is the case, it will provide a specific error message to guide you to execute it on the host machine.
 
 ### 2. HTTPConnectionPool / Connection Refused Errors
 

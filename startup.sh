@@ -16,6 +16,12 @@ error_exit() {
   exit 1
 }
 
+# Check if running inside a standard Docker container
+if [ -f /.dockerenv ]; then
+  error_exit "This script must be run on your host machine, not inside a Docker container." \
+"It orchestrates Docker containers and needs access to the Docker daemon installed on your computer. Please execute 'bash startup.sh' from your host system's terminal."
+fi
+
 echo "Starting End-to-End CRM Application..."
 
 # Check for Docker
