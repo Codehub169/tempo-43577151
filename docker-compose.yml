@@ -1,0 +1,95 @@
+version: '3.8'
+
+# This Docker Compose file orchestrates the CRM application services:
+# - db: PostgreSQL database
+# - frontend_builder: Builds the static frontend assets
+# - backend: NestJS application serving both the API and the frontend assets
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: crm_db
+    restart: unless-stopped
+    environment:
+      # Default credentials; override these in a .env file at the root of the project
+      POSTGRES_USER: ${POSTGRES_USER:-crm_user} 
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crm_secret_password} # CHANGE THIS IN PRODUCTION
+      POSTGRES_DB: ${POSTGRES_DB:-crm_db}
+    volumes:
+      - pgdata:/var/lib/postgresql/data # Persists database data
+    ports:
+      # Expose PostgreSQL port to host for direct access (e.g., with a DB client)
+      # Format: HOST_PORT:CONTAINER_PORT. Default is 5432:5432
+      - "${POSTGRES_EXPOSED_PORT:-5432}:5432"
+    networks:
+      - crm_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crm_user} -d ${POSTGRES_DB:-crm_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # This service builds the frontend static assets. 
+  # The resulting image ('crm-frontend-build-stage') is used by the 'backend' service.
+  frontend_builder:
+    build:
+      context: ./frontend # Path to the frontend Dockerfile and source code
+      dockerfile: Dockerfile.frontend
+    image: crm-frontend-build-stage # Tag for the built image
+    container_name: crm_frontend_builder
+    # This service does not run long-term; it's only for the build process.
+    # No ports or networks needed here as it's just a build artifact source.
+
+  backend:
+    build:
+      context: ./backend # Path to the backend Dockerfile and source code
+      dockerfile: Dockerfile.backend
+      args:
+        # Ensures Dockerfile.backend uses the correct image name from frontend_builder
+        FRONTEND_BUILDER_IMAGE: crm-frontend-build-stage 
+    container_name: crm_backend
+    restart: unless-stopped
+    ports:
+      # Maps host port 9000 to container port 9000 (defined by API_PORT)
+      # The backend serves both the API and the frontend on this single port.
+      - "${APP_PORT:-9000}:9000"
+    depends_on:
+      db: # Ensures backend starts after the database is healthy
+        condition: service_healthy
+      # frontend_builder is an implicit build dependency, not a runtime one.
+      # Docker Compose handles build order automatically when 'crm-frontend-build-stage' is referenced.
+    environment:
+      # Database connection string for the backend application
+      DATABASE_URL: postgresql://${POSTGRES_USER:-crm_user}:${POSTGRES_PASSWORD:-crm_secret_password}@db:5432/${POSTGRES_DB:-crm_db}
+      # JWT secret key for authentication. CHANGE THIS IN PRODUCTION and make it strong.
+      JWT_SECRET: ${JWT_SECRET:-aVeryWeakSecretChangeThisNow!RandomString32PlusChars}
+      # Port the NestJS application inside the container will listen on.
+      API_PORT: 9000
+      NODE_ENV: ${NODE_ENV:-development}
+      # Add any other backend-specific environment variables here
+      # Example: TYPEORM_SYNCHRONIZE=${TYPEORM_SYNCHRONIZE:-false} (set to true for dev, false for prod)
+    volumes:
+      # For production, code is copied into the image. No volumes are strictly needed for code.
+      # For development with hot-reloading for NestJS, uncomment and adjust as needed:
+      # - ./backend/src:/usr/src/app/src
+      # - ./backend/test:/usr/src/app/test
+      # - ./backend/package.json:/usr/src/app/package.json
+      # - ./backend/tsconfig.json:/usr/src/app/tsconfig.json
+      # - ./backend/nest-cli.json:/usr/src/app/nest-cli.json
+      # - /usr/src/app/node_modules # Prevents host node_modules from overwriting container's
+
+      # Mount the .env file from the backend directory into the container
+      # This allows the NestJS ConfigModule to load it.
+      # Ensure backend/.env exists or is created from backend/.env.example
+      - ./backend/.env:/usr/src/app/.env 
+    networks:
+      - crm_network
+    # Optional: Add a healthcheck for the backend service later
+
+networks:
+  crm_network:
+    driver: bridge # Default bridge network for inter-service communication
+
+volumes:
+  pgdata:
+    driver: local # Persists PostgreSQL data on the host machine

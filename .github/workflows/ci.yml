@@ -1,0 +1,81 @@
+name: CRM CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  build_and_test:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub (Optional - if pushing images)
+        # if: github.event_name != 'pull_request'
+        # uses: docker/login-action@v2
+        # with:
+        #   username: ${{ secrets.DOCKERHUB_USERNAME }}
+        #   password: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: echo "Skipping Docker Hub login for now."
+
+      - name: Build Frontend Image
+        run: |
+          docker build \
+            -t crm-frontend-build-stage:latest \
+            -f frontend/Dockerfile.frontend \
+            ./frontend
+        
+      - name: Build Backend Image
+        run: |
+          # Create a dummy .env file for backend build if it needs one during build stage, though it shouldn't for just building
+          # For actual running, it would source from docker-compose or k8s secrets
+          echo "# Dummy .env for build" > backend/.env 
+          echo "DATABASE_URL=postgresql://user:pass@host:port/db" >> backend/.env
+
+          docker build \
+            --build-arg FRONTEND_BUILDER_IMAGE=crm-frontend-build-stage:latest \
+            -t crm-backend:latest \
+            -f Dockerfile.backend \
+            .
+
+      # Add Linting Steps (Placeholder)
+      # - name: Lint Backend
+      #   run: |
+      #     cd backend
+      #     npm ci
+      #     npm run lint
+
+      # - name: Lint Frontend
+      #   run: |
+      #     cd frontend
+      #     npm ci
+      #     npm run lint
+
+      # Add Testing Steps (Placeholder)
+      # - name: Test Backend
+      #   run: |
+      #     # Ensure DB is up if tests are integration tests, or mock DB for unit tests
+      #     cd backend
+      #     npm ci
+      #     npm run test
+      
+      # - name: Test Frontend
+      #   run: |
+      #     cd frontend
+      #     npm ci
+      #     npm run test
+
+      - name: Verify Docker Images (Example: List images)
+        run: docker images

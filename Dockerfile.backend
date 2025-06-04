@@ -1,0 +1,66 @@
+# This Dockerfile builds the NestJS backend application.
+# It incorporates frontend static assets copied from a pre-built frontend image.
+
+# Argument to specify the frontend builder image name.
+# This should match the image name defined in docker-compose.yml for the frontend_builder service.
+ARG FRONTEND_BUILDER_IMAGE=crm-frontend-build-stage
+
+# ---- Stage 1: Build NestJS Application ----
+FROM node:18-alpine AS builder
+
+WORKDIR /usr/src/app
+
+# Install build tools like python, make, g++ if any native modules need compilation
+# RUN apk add --no-cache python3 make g++
+
+# Copy package.json and lock file
+COPY package.json ./
+# Choose one based on your package manager (npm or yarn)
+COPY package-lock.json* ./
+# COPY yarn.lock ./
+
+# Install all dependencies (including devDependencies needed for build)
+RUN npm ci --legacy-peer-deps
+# RUN yarn install --frozen-lockfile
+
+# Copy the rest of the backend application source code
+COPY . .
+
+# Build the NestJS application (compiles TypeScript to JavaScript)
+# This typically outputs to a 'dist' folder.
+RUN npm run build
+
+# ---- Stage 2: Production Image ----
+FROM node:18-alpine AS production
+
+WORKDIR /usr/src/app
+
+# Set environment to production for optimized execution
+ENV NODE_ENV=production
+# The port the NestJS application will listen on. Must match docker-compose.yml exposure.
+ENV API_PORT=9000 
+
+# Copy built application (dist folder) and package files from the builder stage
+COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/package.json ./
+# Choose one based on your package manager
+COPY --from=builder /usr/src/app/package-lock.json* ./
+# COPY --from=builder /usr/src/app/yarn.lock ./
+
+# Install only production dependencies to keep the image lean
+RUN npm ci --only=production --legacy-peer-deps
+# RUN yarn install --production --frozen-lockfile
+
+# Copy frontend static assets from the frontend builder image specified by ARG.
+# These assets will be served by the NestJS application.
+# The destination path (e.g., './public') must match the path configured 
+# in NestJS's ServeStaticModule.
+COPY --from=${FRONTEND_BUILDER_IMAGE} /app/dist ./public
+
+# Expose the port the application runs on (should match API_PORT and docker-compose.yml)
+EXPOSE ${API_PORT}
+
+# Command to run the application.
+# This typically starts the NestJS app from the 'dist' folder.
+# Ensure your package.json has a 'start:prod' script or use 'node dist/main.js'.
+CMD ["node", "dist/main.js"]
