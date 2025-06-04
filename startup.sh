@@ -2,7 +2,7 @@
 
 ################################################################################
 #                                                                              #
-#                  🔴   !!!   IMPORTANT WARNING   !!!   🔴                     #
+#                  ud83dudd34   !!!   IMPORTANT WARNING   !!!   ud83dudd34                     #
 #                                                                              #
 #   This script MUST be executed on your HOST MACHINE, not inside a Docker     #
 #   container or any environment without direct Docker daemon access.          #
@@ -33,7 +33,7 @@ error_exit() {
 # Check if running inside a standard Docker container
 if [ -f /.dockerenv ]; then
   error_exit "This script must be run on your host machine, not inside a Docker container." \
-"Running this script inside a container will prevent the application services (like the web server and database) from starting correctly. This, in turn, will lead to connection errors (e.g., HTTPConnectionPool, 'connection refused') when you try to access the application. The script requires direct access to the Docker daemon on your computer to manage these services. Please ensure you are in the project's root directory on your HOST MACHINE and then run 'bash startup.sh' from your host system's terminal."
+"DETAILS:\n- Running this script inside a container will prevent the application services (like the web server and database) from starting correctly.\n- This, in turn, will lead to connection errors (e.g., HTTPConnectionPool, 'connection refused') when you try to access the application.\n- The script requires direct access to the Docker daemon on your computer to manage these services.\n\nSOLUTION:\n- Ensure you are in the project's root directory on your HOST MACHINE.\n- Run 'bash startup.sh' from your host system's terminal.\n- Do NOT run this script from within a Docker container environment."
 fi
 
 echo "Starting End-to-End CRM Application..."
