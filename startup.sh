@@ -33,12 +33,12 @@ error_exit() {
 # Check if running inside a standard Docker container
 if [ -f /.dockerenv ]; then
   error_exit "This script must be run on your host machine, not inside a Docker container." \
-"It orchestrates Docker containers and needs access to the Docker daemon installed on your computer. Please execute 'bash startup.sh' from your host system's terminal."
+"Running this script inside a container will prevent the application services (like the web server and database) from starting correctly. This, in turn, will lead to connection errors (e.g., HTTPConnectionPool, 'connection refused') when you try to access the application. The script requires direct access to the Docker daemon on your computer to manage these services. Please ensure you are in the project's root directory on your HOST MACHINE and then run 'bash startup.sh' from your host system's terminal."
 fi
 
 echo "Starting End-to-End CRM Application..."
 
-# Check for Docker
+# Check for Docker command
 if ! command -v docker &>/dev/null; then
   error_exit "Docker command not found in your PATH." \
 "Please ensure Docker is correctly installed and accessible.\nRefer to the README.md file for detailed prerequisites or download Docker from: https://www.docker.com/get-started"
@@ -49,6 +49,12 @@ DOCKER_PATH="$(command -v docker)"
 if ! [ -x "$DOCKER_PATH" ]; then
     error_exit "Docker command '$DOCKER_PATH' was found, but it is not executable." \
 "Please check your Docker installation, PATH, and file permissions."
+fi
+
+# Check if Docker daemon is running
+if ! docker info &>/dev/null; then
+  error_exit "Docker daemon is not running or not accessible." \
+"Please ensure the Docker daemon is started and functioning correctly. On systems like macOS or Windows with Docker Desktop, ensure Docker Desktop is running.\nOn Linux, check the Docker service status (e.g., 'systemctl status docker')."
 fi
 
 # Determine Docker Compose command (v1 or v2)
@@ -70,6 +76,12 @@ fi
 script_dir="$(cd -P "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 cd "$script_dir" || error_exit "Could not change directory to script location: $script_dir"
 
+# Check if docker-compose.yml exists
+if [ ! -f "docker-compose.yml" ]; then
+  error_exit "docker-compose.yml not found in the script directory: $script_dir" \
+"The docker-compose.yml file is essential for defining and running the application services. Please ensure it is present in the project's root directory alongside this startup.sh script."
+fi
+
 # Optional: Stop and remove existing containers, networks, and volumes to ensure a clean start
 # Use with caution if you have important data in volumes not meant to be reset.
 # echo "Stopping and removing existing containers, networks, and orphaned containers..."
@@ -82,7 +94,7 @@ echo "Building images and starting services... (This may take a few minutes on t
 # We handle the success/failure of this command explicitly for better UX,
 # so `set -e` won't immediately halt if it fails.
 if $COMPOSE_COMMAND up --build -d --remove-orphans; then
-  echo # Newline for better formatting
+  echo # Newline
   echo "--------------------------------------------------------------------"
   echo "CRM Application services are starting up!"
   echo
