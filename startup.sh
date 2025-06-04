@@ -1,29 +1,54 @@
 #!/bin/bash
 # This script automates the setup and launch of the CRM application.
 
+# Exit immediately if a command exits with a non-zero status.
+# Treat unset variables as an error when substituting.
+# Prevent errors in a pipeline from being masked.
+set -euo pipefail
+
+# Function to print error messages to stderr and exit
+error_exit() {
+  echo "Error: $1" >&2
+  # Print the second argument (details) if provided and not empty
+  if [ -n "${2:-}" ]; then 
+    echo -e "\n$2" >&2 # -e enables interpretation of backslash escapes like \n
+  fi
+  exit 1
+}
+
 echo "Starting End-to-End CRM Application..."
 
 # Check for Docker
-if ! [ -x "$(command -v docker)" ]; then
-  echo 'Error: docker is not installed. Please install Docker and try again.' >&2
-  exit 1
+if ! command -v docker &>/dev/null; then
+  error_exit "Docker command not found in your PATH." \
+"Please ensure Docker is correctly installed and accessible.\nRefer to the README.md file for detailed prerequisites or download Docker from: https://www.docker.com/get-started"
 fi
 
-# Check for Docker Compose (v1 or v2)
-if ! [ -x "$(command -v docker-compose)" ]; then
-  if ! docker compose version &> /dev/null; then
-    echo 'Error: docker-compose (or docker compose v2) is not installed. Please install Docker Compose and try again.' >&2
-    exit 1
-  fi
-  COMPOSE_COMMAND="docker compose"
-echo "Using Docker Compose v2 (docker compose)"
-else
+# Ensure Docker command is executable
+DOCKER_PATH="$(command -v docker)"
+if ! [ -x "$DOCKER_PATH" ]; then
+    error_exit "Docker command '$DOCKER_PATH' was found, but it is not executable." \
+"Please check your Docker installation, PATH, and file permissions."
+fi
+
+# Determine Docker Compose command (v1 or v2)
+COMPOSE_COMMAND=""
+if command -v docker-compose &>/dev/null && [ -x "$(command -v docker-compose)" ]; then
   COMPOSE_COMMAND="docker-compose"
-echo "Using Docker Compose v1 (docker-compose)"
+  echo "Using Docker Compose v1 (docker-compose)"
+elif docker compose version &>/dev/null; then # This implies 'docker' is working and 'compose' is a valid subcommand
+  COMPOSE_COMMAND="docker compose"
+  echo "Using Docker Compose v2 (docker compose)"
+else
+  error_exit "Docker Compose (v1: docker-compose, or v2: docker compose) is not installed, not found in PATH, or not executable." \
+"Please ensure Docker Compose is correctly installed. It usually comes with Docker Desktop.\nFor Docker Compose installation instructions, see: https://docs.docker.com/compose/install/\nRefer to the README.md file for detailed prerequisites."
 fi
 
 # Navigate to the script's directory to ensure docker-compose.yml is found
-cd "$(dirname "$0")"
+# This is critical for docker-compose to find its configuration file.
+# Using -P to resolve physical path, handles symlinks better.
+script_dir="$(cd -P "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+cd "$script_dir" || error_exit "Could not change directory to script location: $script_dir"
 
 # Optional: Stop and remove existing containers, networks, and volumes to ensure a clean start
 # Use with caution if you have important data in volumes not meant to be reset.
@@ -33,21 +58,21 @@ cd "$(dirname "$0")"
 # Build images and start services in detached mode
 # The --remove-orphans flag cleans up containers for services no longer defined in the compose file.
 echo "Building images and starting services... (This may take a few minutes on the first run)"
-$COMPOSE_COMMAND up --build -d --remove-orphans
 
-# Check if the command was successful
-if [ $? -eq 0 ]; then
-  echo ""
+# We handle the success/failure of this command explicitly for better UX,
+# so `set -e` won't immediately halt if it fails.
+if $COMPOSE_COMMAND up --build -d --remove-orphans; then
+  echo # Newline for better formatting
   echo "--------------------------------------------------------------------"
   echo "CRM Application services are starting up!"
-  echo ""
+  echo
   echo "Frontend & API available at: http://localhost:9000"
   echo "(API endpoints will be under http://localhost:9000/api/...)"
-  echo ""
+  echo
   echo "Database (PostgreSQL) is running in a container."
   echo "  - Access credentials and port can be found in your .env file or docker-compose.yml."
   echo "  - Default DB Port (if exposed): 5432 (check docker-compose.yml)"
-  echo ""
+  echo
   echo "Useful commands:"
   echo "  - To view logs for all services: $COMPOSE_COMMAND logs -f"
   echo "  - To view logs for a specific service (e.g., backend): $COMPOSE_COMMAND logs -f backend"
@@ -55,10 +80,10 @@ if [ $? -eq 0 ]; then
   echo "  - To stop and remove volumes (data reset): $COMPOSE_COMMAND down -v"
   echo "--------------------------------------------------------------------"
 else
-  echo ""
-  echo "Error starting the CRM application services." >&2
-  echo "Please check the logs for more details: $COMPOSE_COMMAND logs" >&2
-  exit 1
+  # The $COMPOSE_COMMAND failed. $? will be non-zero.
+  echo # Newline
+  error_exit "Failed to start the CRM application services." \
+"Please check the logs for more details: $COMPOSE_COMMAND logs"
 fi
 
 exit 0
