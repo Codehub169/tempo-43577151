@@ -50,13 +50,14 @@ Before you begin, ensure you have the following installed **on your host machine
 
 3.  **Run the application:**
     Make sure Docker Desktop (or Docker daemon on Linux) is running **on your host machine**.
-    From the project root directory, execute the `startup.sh` script **on your host machine's terminal**:
+    
+    **CRITICAL NOTE:** The `startup.sh` script **must** be executed directly on your **host machine's terminal**, not from within a Docker container. The script requires access to the Docker CLI installed on your host to build and manage containers. Running it elsewhere will lead to errors like "Docker command not found".
+
+    From the project root directory, execute the script:
     ```bash
     bash startup.sh
     ```
-    **Do NOT run `startup.sh` inside a Docker container.** This script is designed to check for Docker and Docker Compose on your host, then build and manage the necessary Docker containers for the application.
-
-    If you encounter errors like "Docker command not found", please verify your Docker installation on your host machine and ensure its command-line tools are accessible in your system's PATH. The [Troubleshooting](#troubleshooting) section below provides more details.
+    If you still encounter errors like "Docker command not found" after ensuring you are on the host, please verify your Docker installation and PATH settings as detailed in the [Troubleshooting](#troubleshooting) section.
 
     This script will typically:
     - Check for Docker and Docker Compose on your host machine.
@@ -94,7 +95,7 @@ This means that Docker or Docker Compose is either not installed on your host ma
 **Symptom:**
 When trying to access the application in your browser (e.g., `http://localhost:9000`), you encounter errors like:
 - `requests.exceptions.ConnectionError: HTTPConnectionPool(...) Max retries exceeded with url: /api/... (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at ...>: Failed to establish a new connection: [Errno 111] Connection refused'))`
-- "This site can’t be reached" or "localhost refused to connect."
+- "This site can	 be reached" or "localhost refused to connect."
 
 **Cause:**
 These errors typically indicate that the backend application services (which run inside Docker containers) are not running, not accessible, or did not start up correctly. This is often a consequence of issues during the `startup.sh` script execution.
